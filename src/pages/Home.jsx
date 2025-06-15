@@ -1,30 +1,10 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
-import { Link } from "react-router-dom";
-
 const Home = () => {
-
   return (
-    <div>
-      <h1>🏠 Home Page</h1>
-
-      <SignedIn>
-        <div>
-          {console.log("User has successfully signed up")}
-          <p>You're signed in!</p>
-          <UserButton />
-          <nav>
-            <Link to="/dashboard">Dashboard</Link> |{" "}
-            <Link to="/profile">Profile</Link>
-          </nav>
-        </div>
-      </SignedIn>
-
-      <SignedOut>
-        <p>
-          <Link to="/sign-in">Sign In</Link> or{" "}
-          <Link to="/sign-up">Sign Up</Link>
-        </p>
-      </SignedOut>
+    <div className="flex flex-col items-center justify-center max-h-[100vh] px-4 sm:px-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-3xl font-bold text-green-600">Welcome to MailMate📮</h1>
+        <p className="text-lg text-gray-700">You're signed in!</p>
+      </div>
     </div>
   );
 };

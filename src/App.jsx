@@ -1,45 +1,62 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SignIn, SignUp } from "@clerk/clerk-react";
-
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import PrivateRoute from "./components/PrivateRoute";
+import Header from "./components/Layout/Header";
+import Footer from "./components/Layout/Footer";
+import AuthLayout from "./components/Layout/AuthLayout";
+
+function AppContent() {
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith("/sign-in") || 
+                    location.pathname.startsWith("/sign-up");
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-100 to-indigo-100 text-gray-800">
+      {!isAuthPage && <Header />}
+
+      <main className={`flex-grow ${!isAuthPage ? "py-8 px-4 sm:px-8" : ""}`}>
+        <Routes>
+          <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+          
+          <Route
+            path="/sign-in/*"
+            element={
+              <AuthLayout>
+                <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
+                  <SignIn routing="path" path="/sign-in" afterSignInUrl="/" />
+                </div>
+              </AuthLayout>
+            }
+          />
+          
+          <Route
+            path="/sign-up/*"
+            element={
+              <AuthLayout>
+                <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
+                  <SignUp routing="path" path="/sign-up" afterSignUpUrl="/" />
+                </div>
+              </AuthLayout>
+            }
+          />
+
+          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+        </Routes>
+      </main>
+
+      {!isAuthPage && <Footer />}
+    </div>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-
-        {/* Clerk Auth Pages */}
-        <Route
-          path="/sign-in/*"
-          element={<SignIn routing="path" path="/sign-in" afterSignInUrl="/" />}
-        />
-        <Route
-          path="/sign-up/*"
-          element={<SignUp routing="path" path="/sign-up" afterSignUpUrl="/" />}
-        />
-
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <PrivateRoute>
-              <Profile />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
+      <AppContent />
     </BrowserRouter>
   );
 }
