@@ -4,9 +4,9 @@ import Sidebar from "./Sidebar";
 const MainLayout = () => {
   return (
     <div className="flex flex-col max-h-screen bg-gradient-to-br from-pink-10 to-indigo-10">
-      <div className="flex flex-1 mb-20 pt-16 pr-16 relative">
+      <div className="flex flex-1 relative">
         <Sidebar />
-        <main className="flex-grow p-8 ml-64">
+        <main className="flex-grow ml-36">
           <Outlet />
         </main>
       </div>

@@ -19,7 +19,7 @@ function AppContent() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-100 to-indigo-100 text-gray-800">
       {!isAuthPage && <Header />}
 
-      <main className={`flex-grow ${!isAuthPage ? "py-8 px-4 sm:px-8" : ""}`}>
+      <main className={`flex-grow ${!isAuthPage ? "my-2 py-4 px-3 sm:px-8" : ""}`}>
         <Routes>
           
           <Route

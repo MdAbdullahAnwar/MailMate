@@ -11,10 +11,15 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.32.0",
+    "@firebase/app-compat": "^0.4.1",
+    "@firebase/firestore-compat": "^0.3.52",
     "@tailwindcss/vite": "^4.1.10",
+    "firebase": "^11.9.1",
+    "jodit-react": "^5.2.19",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
+    "react-toastify": "^11.0.5",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {

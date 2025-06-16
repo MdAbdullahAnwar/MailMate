@@ -1,6 +1,6 @@
 const Footer = () => {
   return (
-    <footer className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 text-gray-100 py-3 mt-10 shadow-inner">
+    <footer className="bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 text-gray-100 py-3 shadow-inner">
       <div className="max-w-7xl mx-auto px-4 text-center text-sm sm:text-base">
         <p>
           © 2025 <span className="font-semibold text-white">MailMate</span> · Built with
