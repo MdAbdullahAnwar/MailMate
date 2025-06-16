@@ -8,10 +8,12 @@ import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
 import AuthLayout from "./components/Layout/AuthLayout";
 
+import MainLayout from "./components/Layout/MainLayout";
+import Compose from "./pages/Compose";
+
 function AppContent() {
   const location = useLocation();
-  const isAuthPage = location.pathname.startsWith("/sign-in") || 
-                    location.pathname.startsWith("/sign-up");
+  const isAuthPage = location.pathname.startsWith("/sign-in") || location.pathname.startsWith("/sign-up");
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-100 to-indigo-100 text-gray-800">
@@ -19,7 +21,6 @@ function AppContent() {
 
       <main className={`flex-grow ${!isAuthPage ? "py-8 px-4 sm:px-8" : ""}`}>
         <Routes>
-          <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
           
           <Route
             path="/sign-in/*"
@@ -43,8 +44,13 @@ function AppContent() {
             }
           />
 
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/compose" element={<Compose />} />
+          </Route>
+
         </Routes>
       </main>
 
