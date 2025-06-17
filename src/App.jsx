@@ -10,6 +10,8 @@ import AuthLayout from "./components/Layout/AuthLayout";
 
 import MainLayout from "./components/Layout/MainLayout";
 import Compose from "./pages/Compose";
+import Inbox from "./pages/Inbox";
+import Trash from "./pages/Trash";
 
 function AppContent() {
   const location = useLocation();
@@ -49,6 +51,8 @@ function AppContent() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/compose" element={<Compose />} />
+            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/trash" element={<Trash />} />
           </Route>
 
         </Routes>

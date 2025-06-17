@@ -24,7 +24,7 @@ const Compose = () => {
     toolbarButtonSize: 'medium',
     buttons: [
       'bold', 'italic', 'underline', 'strikethrough', '|',
-      'font', 'fontsize', '|', 
+      'font', 'fontsize', '|',
       'ul', 'ol', '|',
       'align', '|',
       'undo', 'redo', '|',
@@ -35,16 +35,15 @@ const Compose = () => {
     uploader: {
       insertImageAsBase64URI: true
     },
-    height: 200,
-    style: {
-      fontFamily: 'inherit',
-      fontSize: '16px'
-    }
+    height: 200
   };
 
   useEffect(() => {
     if (user) {
-      setEmail(prev => ({ ...prev, from: user.primaryEmailAddress.emailAddress }));
+      setEmail(prev => ({
+        ...prev,
+        from: user.primaryEmailAddress.emailAddress
+      }));
     }
   }, [user]);
 
@@ -64,12 +63,14 @@ const Compose = () => {
         read: false
       };
 
+      // Sent copy
       await addDoc(collection(db, 'emails'), {
         ...emailData,
         folder: 'sent',
         owner: email.from
       });
 
+      // Inbox copy
       await addDoc(collection(db, 'emails'), {
         ...emailData,
         folder: 'inbox',
@@ -86,28 +87,28 @@ const Compose = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md py-2.4 px-12 ml-28 max-w-6xl mx-auto">
+    <div className="bg-white rounded-lg shadow-md py-2.4 px-8 ml-28 max-w-6xl mx-auto">
       <h1 className="text-xl font-bold text-gray-800 pt-3 mb-1">Compose Email</h1>
       <div className="space-y-1">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
+          <label className="block text-sm font-medium text-gray-700">To:</label>
           <input
             type="email"
             className="w-full px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={email.to}
-            onChange={(e) => setEmail({...email, to: e.target.value})}
+            onChange={(e) => setEmail({ ...email, to: e.target.value })}
             placeholder="recipient@example.com"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject:</label>
+          <label className="block text-sm font-medium text-gray-700">Subject:</label>
           <input
             type="text"
             className="w-full px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={email.subject}
-            onChange={(e) => setEmail({...email, subject: e.target.value})}
+            onChange={(e) => setEmail({ ...email, subject: e.target.value })}
             placeholder="Email subject"
             required
           />
@@ -120,13 +121,13 @@ const Compose = () => {
             value={content}
             config={config}
             onBlur={(newContent) => setContent(newContent)}
-            onChange={(newContent) => {}}
+            onChange={() => {}}
           />
         </div>
 
-        <button 
+        <button
           onClick={handleSendEmail}
-          className="bg-blue-600 text-white px-6 py-2 my-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="bg-blue-600 text-white px-6 py-2 my-2 rounded-md hover:bg-blue-700 transition-colors"
         >
           Send Email
         </button>

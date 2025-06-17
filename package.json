@@ -13,13 +13,20 @@
     "@clerk/clerk-react": "^5.32.0",
     "@firebase/app-compat": "^0.4.1",
     "@firebase/firestore-compat": "^0.3.52",
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.10",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "firebase": "^11.9.1",
     "jodit-react": "^5.2.19",
+    "lucide-react": "^0.516.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "react-toastify": "^11.0.5",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
@@ -31,6 +38,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "tw-animate-css": "^1.3.4",
     "vite": "^6.3.5"
   }
 }
