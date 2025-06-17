@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import EmailModal from '../components/EmailModal';
+
 import {
   Card,
   CardContent,
@@ -33,6 +35,9 @@ const Inbox = () => {
   const [lastVisible, setLastVisible] = useState(null);
   const [page, setPage] = useState(1);
   const [totalEmails, setTotalEmails] = useState(0);
+
+  const [selectedEmail, setSelectedEmail] = useState(null);
+
   const { user } = useUser();
   const navigate = useNavigate();
 
@@ -104,6 +109,9 @@ const Inbox = () => {
       const emailRef = doc(db, 'emails', emailId);
       await updateDoc(emailRef, { read: true });
 
+      const email = emails.find(e => e.id === emailId);
+      setSelectedEmail(email);
+
       setEmails(emails.map(email =>
         email.id === emailId ? { ...email, read: true } : email
       ));
@@ -127,99 +135,104 @@ const Inbox = () => {
   const totalPages = Math.ceil(totalEmails / ITEMS_PER_PAGE);
 
   return (
-    <Card className="w-260 h-113.5 ml-28">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <InboxIcon className="h-5 w-5" />
-            Inbox
-          </CardTitle>
-          <Button onClick={handleCompose}>
-            <MailPlus className="mr-2 h-4 w-4" />
-            Compose
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading && emails.length === 0 ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
+    <Fragment>
+      <Card className="w-260 h-113.5 ml-28">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <InboxIcon className="h-5 w-5" />
+              Inbox
+            </CardTitle>
+            <Button onClick={handleCompose}>
+              <MailPlus className="mr-2 h-4 w-4" />
+              Compose
+            </Button>
           </div>
-        ) : emails.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <InboxIcon className="h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-lg font-medium text-gray-500">Your inbox is empty</p>
-          </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>From</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {emails.map((email) => (
-                  <TableRow key={email.id} onClick={() => handleEmailClick(email.id)} className="cursor-pointer hover:bg-gray-50">
-                    <TableCell>
-                      {!email.read && (
-                        <Badge variant="default" className="bg-blue-500">New</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>{email.from?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span className={!email.read ? "font-semibold" : ""}>{email.from}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={!email.read ? "font-semibold" : ""}>
-                      {email.subject || '(No subject)'}
-                    </TableCell>
-                    <TableCell>
-                      {format(email.timestamp, 'MMM dd, yyyy hh:mm a')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(email.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
+        </CardHeader>
+        <CardContent>
+          {loading && emails.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : emails.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <InboxIcon className="h-12 w-12 text-gray-400" />
+              <p className="mt-4 text-lg font-medium text-gray-500">Your inbox is empty</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {emails.map((email) => (
+                    <TableRow key={email.id} onClick={() => handleEmailClick(email.id)} className="cursor-pointer hover:bg-gray-50">
+                      <TableCell>
+                        {!email.read && (
+                          <Badge variant="default" className="bg-blue-500">New</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>{email.from?.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className={!email.read ? "font-semibold" : ""}>{email.from}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className={!email.read ? "font-semibold" : ""}>
+                        {email.subject || '(No subject)'}
+                      </TableCell>
+                      <TableCell>
+                        {format(email.timestamp, 'MMM dd, yyyy hh:mm a')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(email.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center mt-2">
-                <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {page} of {totalPages}
-                </span>
-                <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-2">
+                  <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-gray-600">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+      {selectedEmail && (
+        <EmailModal email={selectedEmail} onClose={() => setSelectedEmail(null)} />
+      )}
+    </Fragment>
   );
 };
 

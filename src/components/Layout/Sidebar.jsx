@@ -1,17 +1,31 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { SignedIn } from "@clerk/clerk-react";
+import { SignedIn, useUser } from "@clerk/clerk-react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUnreadCount } from "../../store/emailSlice";
 
 const Sidebar = () => {
   const location = useLocation();
+  const dispatch = useDispatch();
+  const { user } = useUser();
+
+  const unreadCount = useSelector((state) => state.email.unreadCount);
+
+  useEffect(() => {
+    if (user?.primaryEmailAddress?.emailAddress) {
+      dispatch(fetchUnreadCount(user.primaryEmailAddress.emailAddress));
+    }
+  }, [dispatch, user]);
+
   const isActive = (path) => location.pathname.startsWith(path);
 
   const menuItems = [
     { name: "Compose", icon: "✏️", path: "/compose" },
-    { name: "Inbox", icon: "📥", path: "/inbox", count: 5 },
+    { name: "Inbox", icon: "📥", path: "/inbox", count: unreadCount },
     { name: "Starred", icon: "⭐", path: "/starred" },
     { name: "Sent", icon: "📤", path: "/sent" },
     { name: "Drafts", icon: "📝", path: "/drafts", count: 2 },
-    { name: "Trash", icon: "🗑️", path: "/trash" }
+    { name: "Trash", icon: "🗑️", path: "/trash" },
   ];
 
   return (
@@ -30,7 +44,7 @@ const Sidebar = () => {
             >
               <span className="mr-3 text-lg">{item.icon}</span>
               <span className="flex-1">{item.name}</span>
-              {item.count && (
+              {item.count > 0 && (
                 <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                   {item.count}
                 </span>
