@@ -42,12 +42,26 @@ export const fetchSentCount = createAsyncThunk(
   }
 );
 
+export const fetchStarredCount = createAsyncThunk(
+  'email/fetchStarredCount',
+  async (userEmail) => {
+    const q = query(
+      collection(db, 'emails'),
+      where('owner', '==', userEmail),
+      where('starred', '==', true)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  }
+);
+
 const emailSlice = createSlice({
   name: 'email',
   initialState: {
     unreadCount: 0,
     trashCount: 0,
     sentCount: 0,
+    starredCount: 0,
     status: 'idle',
   },
   reducers: {},
@@ -61,6 +75,9 @@ const emailSlice = createSlice({
       })
       .addCase(fetchSentCount.fulfilled, (state, action) => {
         state.sentCount = action.payload;
+      })
+      .addCase(fetchStarredCount.fulfilled, (state, action) => {
+        state.starredCount = action.payload;
       });
   },
 });

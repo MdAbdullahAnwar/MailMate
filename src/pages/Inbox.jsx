@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
+import { Star, StarOff } from 'lucide-react';
 import { collection, query, where, getDocs, doc, updateDoc, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useUser } from '@clerk/clerk-react';
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MailPlus, Inbox as InboxIcon, Trash2, ChevronLeft, ChevronRight, Loader2} from 'lucide-react';
+import { MailPlus, Inbox as InboxIcon, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -35,7 +36,6 @@ const Inbox = () => {
   const [lastVisible, setLastVisible] = useState(null);
   const [page, setPage] = useState(1);
   const [totalEmails, setTotalEmails] = useState(0);
-
   const [selectedEmail, setSelectedEmail] = useState(null);
 
   const { user } = useUser();
@@ -125,11 +125,6 @@ const Inbox = () => {
       const emailRef = doc(db, 'emails', emailId);
       await updateDoc(emailRef, { folder: 'trash' });
 
-      const deletedEmail = emails.find(email => email.id === emailId);
-      if (deletedEmail && !deletedEmail.read) {
-        dispatch(fetchUnreadCount(user.primaryEmailAddress.emailAddress));
-      }
-
       setEmails(emails.filter(email => email.id !== emailId));
       toast.success('Email moved to trash');
     } catch (error) {
@@ -137,12 +132,32 @@ const Inbox = () => {
     }
   };
 
+  const toggleStar = async (email) => {
+    try {
+      const ref = doc(db, 'emails', email.id);
+      const updatedStarred = !email.starred;
+
+      await updateDoc(ref, { starred: updatedStarred });
+
+      // Update local state for instant UI feedback
+      setEmails(prev =>
+        prev.map(e =>
+          e.id === email.id ? { ...e, starred: updatedStarred } : e
+        )
+      );
+
+      toast.success(updatedStarred ? 'Starred' : 'Unstarred');
+    } catch (error) {
+      toast.error('Failed to update star status');
+    }
+  };
+
   const totalPages = Math.ceil(totalEmails / ITEMS_PER_PAGE);
 
   return (
     <Fragment>
-      <Card className="w-260 h-113.5 ml-28">
-        <CardHeader>
+      <Card className="w-260 h-fit ml-28">
+        <CardHeader className="h-8.5">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <InboxIcon className="h-5 w-5" />
@@ -169,6 +184,7 @@ const Inbox = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Star</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>From</TableHead>
                     <TableHead>Subject</TableHead>
@@ -179,6 +195,13 @@ const Inbox = () => {
                 <TableBody>
                   {emails.map((email) => (
                     <TableRow key={email.id} onClick={() => handleEmailClick(email.id)} className="cursor-pointer hover:bg-gray-50">
+                      <TableCell onClick={(e) => { e.stopPropagation(); toggleStar(email); }}>
+                        {email.starred === true ? (
+                          <Star className="text-yellow-500 cursor-pointer" />
+                        ) : (
+                          <StarOff className="cursor-pointer" />
+                        )}
+                      </TableCell>
                       <TableCell>
                         {!email.read && (
                           <Badge variant="default" className="bg-blue-500">New</Badge>
@@ -217,7 +240,7 @@ const Inbox = () => {
               </Table>
 
               {totalPages > 1 && (
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex justify-between items-center mt-1">
                   <Button variant="outline" className="cursor-pointer" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Previous
@@ -235,6 +258,7 @@ const Inbox = () => {
           )}
         </CardContent>
       </Card>
+
       {selectedEmail && (
         <EmailModal email={selectedEmail} onClose={() => setSelectedEmail(null)} />
       )}

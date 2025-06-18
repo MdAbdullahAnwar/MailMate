@@ -1,7 +1,14 @@
-// src/pages/Sent.jsx
-import { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import {
-  collection, query, where, getDocs, doc, updateDoc, orderBy, limit, startAfter
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  orderBy,
+  limit,
+  startAfter,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useUser } from '@clerk/clerk-react';
@@ -9,30 +16,35 @@ import { format } from 'date-fns';
 import EmailModal from '../components/EmailModal';
 
 import {
-  Card, CardContent, CardHeader, CardTitle
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  MailPlus, Trash2, ChevronLeft, ChevronRight, Loader2, Send, Star, StarOff
-} from 'lucide-react';
-import { toast } from 'react-toastify';
+import { Star, StarOff, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const ITEMS_PER_PAGE = 5;
 
-const Sent = () => {
+const Starred = () => {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalEmails, setTotalEmails] = useState(0);
-  const [selectedEmail, setSelectedEmail] = useState(null);
   const [pagesCursor, setPagesCursor] = useState([]);
+  const [selectedEmail, setSelectedEmail] = useState(null);
   const { user } = useUser();
 
-  const fetchSentEmails = async (pageNum = 1) => {
+  const fetchStarredEmails = async (pageNum = 1) => {
     try {
       setLoading(true);
       const userEmail = user?.primaryEmailAddress?.emailAddress;
@@ -43,85 +55,86 @@ const Sent = () => {
         q = query(
           collection(db, 'emails'),
           where('owner', '==', userEmail),
-          where('folder', '==', 'sent'),
+          where('starred', '==', true),
           orderBy('timestamp', 'desc'),
           limit(ITEMS_PER_PAGE)
         );
       } else {
         const previousCursor = pagesCursor[pageNum - 2];
         if (!previousCursor) return;
-
         q = query(
           collection(db, 'emails'),
           where('owner', '==', userEmail),
-          where('folder', '==', 'sent'),
+          where('starred', '==', true),
           orderBy('timestamp', 'desc'),
           startAfter(previousCursor),
           limit(ITEMS_PER_PAGE)
         );
       }
 
-      const querySnapshot = await getDocs(q);
-      const emailsData = querySnapshot.docs.map(doc => ({
+      const snap = await getDocs(q);
+
+      const data = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
+        timestamp: doc.data().timestamp?.toDate() || new Date(),
       }));
-
+    //   console.log("Fetched emails:", data);
       if (pageNum === 1) {
-        const countQuery = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'sent')
+        const countSnap = await getDocs(
+          query(
+            collection(db, 'emails'),
+            where('owner', '==', userEmail),
+            where('starred', '==', true)
+          )
         );
-        const countSnapshot = await getDocs(countQuery);
-        setTotalEmails(countSnapshot.size);
+        setTotalEmails(countSnap.size);
       }
 
-      if (querySnapshot.docs.length > 0) {
-        const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+      if (snap.docs.length > 0) {
+        const newLastVisible = snap.docs[snap.docs.length - 1];
         const updatedCursors = [...pagesCursor];
         updatedCursors[pageNum - 1] = newLastVisible;
         setPagesCursor(updatedCursors);
       }
 
-      setEmails(emailsData);
-    } catch (error) {
-      console.error('Error fetching sent emails:', error);
-      toast.error('Failed to load sent emails');
+      setEmails(data);
+    } catch (err) {
+      toast.error('Failed to load starred emails');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSentEmails(page);
-  }, [user, page]);
-
-  const handleEmailClick = (emailId) => {
-    const email = emails.find(e => e.id === emailId);
-    setSelectedEmail(email);
-  };
-
-  const handleDelete = async (emailId) => {
-    try {
-      const emailRef = doc(db, 'emails', emailId);
-      await updateDoc(emailRef, { folder: 'trash' });
-      setEmails(emails.filter(email => email.id !== emailId));
-      toast.success('Email moved to trash');
-    } catch (error) {
-      toast.error('Failed to delete email');
+    if (user?.primaryEmailAddress?.emailAddress) {
+      fetchStarredEmails(page);
     }
-  };
+  }, [user?.primaryEmailAddress?.emailAddress, page]);
 
   const toggleStar = async (email) => {
     try {
       const ref = doc(db, 'emails', email.id);
       await updateDoc(ref, { starred: !email.starred });
-      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, starred: !e.starred } : e));
+      setEmails(prev => prev.filter(e => e.id !== email.id));
       toast.success(email.starred ? 'Unstarred' : 'Starred');
-    } catch (err) {
+    } catch {
       toast.error('Failed to update star status');
+    }
+  };
+
+  const clearAllStarred = async () => {
+    const updates = emails.map(email => {
+      const ref = doc(db, 'emails', email.id);
+      return updateDoc(ref, { starred: false });
+    });
+
+    try {
+      await Promise.all(updates);
+      toast.success('All emails unstarred');
+      setEmails([]);
+    } catch (error) {
+      toast.error('Failed to unstar all emails');
     }
   };
 
@@ -130,14 +143,20 @@ const Sent = () => {
   return (
     <Fragment>
       <Card className="w-260 h-fit ml-28">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Sent Emails
-            </CardTitle>
-          </div>
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <CardTitle>⭐ Starred</CardTitle>
+          {emails.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={clearAllStarred}
+              className="mt-2 md:mt-0 cursor-pointer"
+            >
+              Clear Starred
+            </Button>
+          )}
         </CardHeader>
+
         <CardContent>
           {loading && emails.length === 0 ? (
             <div className="flex justify-center py-8">
@@ -145,27 +164,26 @@ const Sent = () => {
             </div>
           ) : emails.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Send className="h-12 w-12 text-gray-400" />
-              <p className="mt-4 text-lg font-medium text-gray-500">No sent emails yet</p>
+              <StarOff className="h-12 w-12 text-gray-400" />
+              <p className="mt-4 text-lg font-medium text-gray-500">No starred emails</p>
             </div>
           ) : (
             <>
-              <Table>
+              <Table className="border-separate border-spacing-y-2">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Star</TableHead>
-                    <TableHead>To</TableHead>
+                    <TableHead>From / To</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {emails.map((email) => (
+                <TableBody className="divide-y divide-gray-200">
+                  {emails.map(email => (
                     <TableRow
                       key={email.id}
-                      onClick={() => handleEmailClick(email.id)}
                       className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => setSelectedEmail(email)}
                     >
                       <TableCell
                         onClick={(e) => {
@@ -176,33 +194,15 @@ const Sent = () => {
                         {email.starred ? (
                           <Star className="text-yellow-500" />
                         ) : (
-                          <StarOff className="text-gray-400" />
+                          <StarOff />
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {email.to?.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{email.to}</span>
-                        </div>
+                        {email.folder === 'sent' ? `To: ${email.to}` : `From: ${email.from}`}
                       </TableCell>
                       <TableCell>{email.subject || '(No subject)'}</TableCell>
-                      <TableCell>{format(email.timestamp, 'MMM dd, yyyy hh:mm a')}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(email.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                      <TableCell>
+                        {format(email.timestamp, 'MMM dd, yyyy hh:mm a')}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -210,12 +210,12 @@ const Sent = () => {
               </Table>
 
               {totalPages > 1 && (
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex justify-between items-center mt-4">
                   <Button variant="outline" className="cursor-pointer" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4 mr-2" /> Previous
                   </Button>
                   <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                  <Button variant="outline" disabled={page === totalPages} className="cursor-pointer" onClick={() => setPage(p => p + 1)}>
+                  <Button variant="outline" className="cursor-pointer" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
                     Next <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -226,10 +226,13 @@ const Sent = () => {
       </Card>
 
       {selectedEmail && (
-        <EmailModal email={selectedEmail} onClose={() => setSelectedEmail(null)} />
+        <EmailModal
+          email={selectedEmail}
+          onClose={() => setSelectedEmail(null)}
+        />
       )}
     </Fragment>
   );
 };
 
-export default Sent;
+export default Starred;

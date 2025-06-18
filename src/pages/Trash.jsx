@@ -148,8 +148,8 @@ const Trash = () => {
 
   return (
     <Fragment>
-      <Card className="w-[90.4%] ml-28">
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="w-[90.4%] h-fit ml-28">
+        <CardHeader className="flex flex-row items-center justify-between h-1 m-2">
           <CardTitle className="flex items-center gap-2">
             <Trash2 className="h-5 w-5" />
             Trash

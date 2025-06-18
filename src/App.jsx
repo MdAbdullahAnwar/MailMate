@@ -13,6 +13,7 @@ import AuthLayout from "./components/Layout/AuthLayout";
 import MainLayout from "./components/Layout/MainLayout";
 import Compose from "./pages/Compose";
 import Inbox from "./pages/Inbox";
+import Starred from "./pages/Starred";
 import Sent from "./pages/Sent";
 import Trash from "./pages/Trash";
 
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/compose" element={<Compose />} />
             <Route path="/inbox" element={<Inbox />} />
+            <Route path="/starred" element={<Starred />} />
             <Route path="/sent" element={<Sent />} />
             <Route path="/trash" element={<Trash />} />
           </Route>

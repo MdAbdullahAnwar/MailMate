@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { fetchUnreadCount, fetchTrashCount, fetchSentCount } from '../store/emailSlice';
+import { fetchUnreadCount, fetchTrashCount, fetchSentCount, fetchStarredCount } from '../store/emailSlice';
 
 const useSyncMailCounts = (userEmail) => {
   const dispatch = useDispatch();
@@ -13,6 +13,7 @@ const useSyncMailCounts = (userEmail) => {
       dispatch(fetchUnreadCount(userEmail));
       dispatch(fetchTrashCount(userEmail));
       dispatch(fetchSentCount(userEmail));
+      dispatch(fetchStarredCount(userEmail));
     };
 
     pollMails();
