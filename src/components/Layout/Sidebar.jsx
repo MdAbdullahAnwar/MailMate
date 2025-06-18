@@ -3,11 +3,14 @@ import { Link, useLocation } from "react-router-dom";
 import { SignedIn, useUser } from "@clerk/clerk-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUnreadCount, fetchTrashCount, fetchSentCount } from "../../store/emailSlice";
+import useSyncMailCounts from "../../hooks/useSyncMailCounts";
 
 const Sidebar = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useUser();
+
+  useSyncMailCounts(user?.primaryEmailAddress?.emailAddress);
 
   const unreadCount = useSelector((state) => state.email.unreadCount);
   const trashCount = useSelector((state) => state.email.trashCount);
