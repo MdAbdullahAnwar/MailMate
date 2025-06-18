@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SignIn, SignUp } from "@clerk/clerk-react";
+import { Toaster } from "react-hot-toast";
+
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -66,6 +68,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" reverseOrder={false} />
       <AppContent />
     </BrowserRouter>
   );

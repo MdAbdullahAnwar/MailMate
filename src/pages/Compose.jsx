@@ -127,7 +127,7 @@ const Compose = () => {
 
         <button
           onClick={handleSendEmail}
-          className="bg-blue-600 text-white px-6 py-2 my-2 rounded-md hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white px-6 py-2 my-2 rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
         >
           Send Email
         </button>

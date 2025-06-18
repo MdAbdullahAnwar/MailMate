@@ -125,6 +125,11 @@ const Inbox = () => {
       const emailRef = doc(db, 'emails', emailId);
       await updateDoc(emailRef, { folder: 'trash' });
 
+      const deletedEmail = emails.find(email => email.id === emailId);
+      if (deletedEmail && !deletedEmail.read) {
+        dispatch(fetchUnreadCount(user.primaryEmailAddress.emailAddress));
+      }
+
       setEmails(emails.filter(email => email.id !== emailId));
       toast.success('Email moved to trash');
     } catch (error) {
@@ -143,7 +148,7 @@ const Inbox = () => {
               <InboxIcon className="h-5 w-5" />
               Inbox
             </CardTitle>
-            <Button onClick={handleCompose}>
+            <Button onClick={handleCompose} className="cursor-pointer">
               <MailPlus className="mr-2 h-4 w-4" />
               Compose
             </Button>
@@ -197,6 +202,7 @@ const Inbox = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(email.id);
@@ -212,14 +218,14 @@ const Inbox = () => {
 
               {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-2">
-                  <Button variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <Button variant="outline" className="cursor-pointer" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <span className="text-sm text-gray-600">
                     Page {page} of {totalPages}
                   </span>
-                  <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                  <Button variant="outline" className="cursor-pointer" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
                     Next
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>

@@ -39,7 +39,7 @@ const EmailModal = ({ email, onClose }) => {
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-white hover:bg-gray-100 text-blue-600 border border-blue-300"
+            className="bg-white hover:bg-gray-100 text-blue-600 border border-blue-300 cursor-pointer"
           >
             Close
           </Button>
