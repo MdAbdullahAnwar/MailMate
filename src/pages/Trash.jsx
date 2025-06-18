@@ -90,16 +90,20 @@ const Trash = () => {
 
   const handleRestore = async (emailId) => {
     try {
-      await updateDoc(doc(db, 'emails', emailId), { folder: 'inbox' });
       const restoredEmail = emails.find(email => email.id === emailId);
+      const userEmail = user.primaryEmailAddress.emailAddress;
+
+      const destinationFolder = restoredEmail.from === userEmail ? 'sent' : 'inbox';
+
+      await updateDoc(doc(db, 'emails', emailId), { folder: destinationFolder });
       setEmails(prev => prev.filter(email => email.id !== emailId));
 
-      if (restoredEmail && !restoredEmail.read) {
-        dispatch(fetchUnreadCount(user.primaryEmailAddress.emailAddress));
+      if (destinationFolder === 'inbox' && restoredEmail && !restoredEmail.read) {
+        dispatch(fetchUnreadCount(userEmail));
       }
 
-      dispatch(fetchTrashCount(user.primaryEmailAddress.emailAddress));
-      toast.success('Email restored to Inbox');
+      dispatch(fetchTrashCount(userEmail));
+      toast.success(`Email restored to ${destinationFolder.charAt(0).toUpperCase() + destinationFolder.slice(1)}`);
     } catch (error) {
       toast.error('Failed to restore email');
     }
@@ -226,7 +230,7 @@ const Trash = () => {
 
               {/* Pagination */}
               {emails.length > ITEMS_PER_PAGE && (
-                <div className="flex justify-center mt-4 gap-4">
+                <div className="flex justify-between items-center mt-4 px-4">
                   <Button
                     variant="outline"
                     className="cursor-pointer"
@@ -235,7 +239,7 @@ const Trash = () => {
                   >
                     Previous
                   </Button>
-                  <span className="self-center text-sm text-gray-600">
+                  <span className="text-sm text-gray-600">
                     Page {currentPage} of {totalPages}
                   </span>
                   <Button

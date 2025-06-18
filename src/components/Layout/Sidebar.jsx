@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { SignedIn, useUser } from "@clerk/clerk-react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchUnreadCount, fetchTrashCount } from "../../store/emailSlice";
+import { fetchUnreadCount, fetchTrashCount, fetchSentCount } from "../../store/emailSlice";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -11,12 +11,14 @@ const Sidebar = () => {
 
   const unreadCount = useSelector((state) => state.email.unreadCount);
   const trashCount = useSelector((state) => state.email.trashCount);
+  const sentCount = useSelector((state) => state.email.sentCount);
 
   useEffect(() => {
     const email = user?.primaryEmailAddress?.emailAddress;
     if (email) {
       dispatch(fetchUnreadCount(email));
       dispatch(fetchTrashCount(email));
+      dispatch(fetchSentCount(email));
     }
   }, [dispatch, user]);
 
@@ -26,7 +28,7 @@ const Sidebar = () => {
     { name: "Compose", icon: "✏️", path: "/compose" },
     { name: "Inbox", icon: "📥", path: "/inbox", count: unreadCount },
     { name: "Starred", icon: "⭐", path: "/starred" },
-    { name: "Sent", icon: "📤", path: "/sent" },
+    { name: "Sent", icon: "📤", path: "/sent", count: sentCount },
     { name: "Drafts", icon: "📝", path: "/drafts", count: 2 },
     { name: "Trash", icon: "🗑️", path: "/trash", count: trashCount },
   ];
