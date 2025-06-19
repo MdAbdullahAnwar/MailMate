@@ -1,12 +1,12 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, Fragment } from 'react';
 import { Star, StarOff } from 'lucide-react';
-import { collection, query, where, getDocs, doc, updateDoc, orderBy, limit, startAfter } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import EmailModal from '../components/EmailModal';
-
+import { useMailAPI } from '../hooks/useMailAPI';
+import { usePaginatedEmails } from '../hooks/usePaginatedEmails';
+import useSyncMailCounts from '../hooks/useSyncMailCounts';
 import {
   Card,
   CardContent,
@@ -28,77 +28,29 @@ import { MailPlus, Inbox as InboxIcon, Trash2, ChevronLeft, ChevronRight, Loader
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const ITEMS_PER_PAGE = 5;
-
 const Inbox = () => {
-  const [emails, setEmails] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [lastVisible, setLastVisible] = useState(null);
-  const [page, setPage] = useState(1);
-  const [totalEmails, setTotalEmails] = useState(0);
-  const [selectedEmail, setSelectedEmail] = useState(null);
-
   const { user } = useUser();
   const navigate = useNavigate();
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  
+  useSyncMailCounts(userEmail);
 
-  const fetchEmails = async (pageNum = 1) => {
-    try {
-      setLoading(true);
-      const userEmail = user?.primaryEmailAddress?.emailAddress;
-      if (!userEmail) return;
-
-      let q;
-      if (pageNum === 1) {
-        q = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'inbox'),
-          orderBy('timestamp', 'desc'),
-          limit(ITEMS_PER_PAGE)
-        );
-      } else {
-        q = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'inbox'),
-          orderBy('timestamp', 'desc'),
-          startAfter(lastVisible),
-          limit(ITEMS_PER_PAGE)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-      const emailsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      }));
-
-      const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
-      setLastVisible(lastDoc);
-
-      if (pageNum === 1) {
-        const countQuery = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'inbox')
-        );
-        const countSnapshot = await getDocs(countQuery);
-        setTotalEmails(countSnapshot.size);
-      }
-
-      setEmails(emailsData);
-    } catch (error) {
-      console.error('Error fetching emails:', error);
-      toast.error('Failed to load emails');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEmails(page);
-  }, [user, page]);
+  const { loading, fetchEmails, toggleStar, moveToTrash, markAsRead } = useMailAPI(userEmail);
+  
+  const {
+    emails,
+    page,
+    setPage,
+    totalPages,
+    refresh
+  } = usePaginatedEmails({
+    userEmail,
+    fetchFn: fetchEmails,
+    folder: 'inbox',
+    pageSize: 5
+  });
 
   const handleCompose = () => {
     navigate('/compose');
@@ -106,53 +58,37 @@ const Inbox = () => {
 
   const handleEmailClick = async (emailId) => {
     try {
-      const emailRef = doc(db, 'emails', emailId);
-      await updateDoc(emailRef, { read: true });
-
       const email = emails.find(e => e.id === emailId);
       setSelectedEmail(email);
 
-      setEmails(emails.map(email =>
-        email.id === emailId ? { ...email, read: true } : email
-      ));
+      if (!email.read) {
+        await markAsRead(emailId);
+        refresh();
+      }
     } catch (error) {
-      toast.error('Failed to mark as read');
+      toast.error('Failed to open email');
     }
   };
 
   const handleDelete = async (emailId) => {
     try {
-      const emailRef = doc(db, 'emails', emailId);
-      await updateDoc(emailRef, { folder: 'trash' });
-
-      setEmails(emails.filter(email => email.id !== emailId));
+      await moveToTrash(emailId);
       toast.success('Email moved to trash');
+      refresh();
     } catch (error) {
       toast.error('Failed to delete email');
     }
   };
 
-  const toggleStar = async (email) => {
+  const handleToggleStar = async (email) => {
     try {
-      const ref = doc(db, 'emails', email.id);
-      const updatedStarred = !email.starred;
-
-      await updateDoc(ref, { starred: updatedStarred });
-
-      // Update local state for instant UI feedback
-      setEmails(prev =>
-        prev.map(e =>
-          e.id === email.id ? { ...e, starred: updatedStarred } : e
-        )
-      );
-
-      toast.success(updatedStarred ? 'Starred' : 'Unstarred');
+      await toggleStar(email.id, email.starred);
+      toast.success(email.starred ? 'Unstarred' : 'Starred');
+      refresh();
     } catch (error) {
       toast.error('Failed to update star status');
     }
   };
-
-  const totalPages = Math.ceil(totalEmails / ITEMS_PER_PAGE);
 
   return (
     <Fragment>
@@ -194,9 +130,13 @@ const Inbox = () => {
                 </TableHeader>
                 <TableBody>
                   {emails.map((email) => (
-                    <TableRow key={email.id} onClick={() => handleEmailClick(email.id)} className="cursor-pointer hover:bg-gray-50">
-                      <TableCell onClick={(e) => { e.stopPropagation(); toggleStar(email); }}>
-                        {email.starred === true ? (
+                    <TableRow 
+                      key={email.id} 
+                      onClick={() => handleEmailClick(email.id)} 
+                      className="cursor-pointer hover:bg-gray-50"
+                    >
+                      <TableCell onClick={(e) => { e.stopPropagation(); handleToggleStar(email); }}>
+                        {email.starred ? (
                           <Star className="text-yellow-500 cursor-pointer" />
                         ) : (
                           <StarOff className="cursor-pointer" />
@@ -241,14 +181,24 @@ const Inbox = () => {
 
               {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-1">
-                  <Button variant="outline" className="cursor-pointer" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <Button 
+                    variant="outline" 
+                    className="cursor-pointer" 
+                    disabled={page === 1} 
+                    onClick={() => setPage(p => p - 1)}
+                  >
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Previous
                   </Button>
                   <span className="text-sm text-gray-600">
                     Page {page} of {totalPages}
                   </span>
-                  <Button variant="outline" className="cursor-pointer" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                  <Button 
+                    variant="outline" 
+                    className="cursor-pointer" 
+                    disabled={page === totalPages} 
+                    onClick={() => setPage(p => p + 1)}
+                  >
                     Next
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>

@@ -1,17 +1,11 @@
-import { useState, useEffect, Fragment } from 'react';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-  deleteDoc,
-  doc,
-  updateDoc,
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { useState, Fragment } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { format } from 'date-fns';
+import EmailModal from '../components/EmailModal';
+import { useMailAPI } from '../hooks/useMailAPI';
+import { usePaginatedEmails } from '../hooks/usePaginatedEmails';
+import useSyncMailCounts from '../hooks/useSyncMailCounts';
+import { toast } from 'react-hot-toast';
 import {
   Card,
   CardContent,
@@ -27,63 +21,41 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, RotateCw } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { useDispatch } from 'react-redux';
-import { fetchUnreadCount, fetchTrashCount } from '../store/emailSlice';
+import { Trash2, RotateCw, Loader2 } from 'lucide-react';
 
 const Trash = () => {
-  const [emails, setEmails] = useState([]);
+  const { user } = useUser();
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  
+  useSyncMailCounts(userEmail);
+
+  const mailAPI = useMailAPI(userEmail);
+  const { loading, deleteDoc, updateEmailFolder } = mailAPI;
+  
+  const {
+    emails,
+    page: currentPage,
+    setPage: setCurrentPage,
+    totalPages,
+    refresh
+  } = usePaginatedEmails({
+    userEmail,
+    fetchFn: mailAPI.fetchEmails,
+    folder: 'trash',
+    pageSize: 5
+  });
+
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const { user } = useUser();
-  const dispatch = useDispatch();
-
-  const ITEMS_PER_PAGE = 5;
-  const [currentPage, setCurrentPage] = useState(1);
-  const indexOfLastEmail = currentPage * ITEMS_PER_PAGE;
-  const indexOfFirstEmail = indexOfLastEmail - ITEMS_PER_PAGE;
-  const currentEmails = emails.slice(indexOfFirstEmail, indexOfLastEmail);
-  const totalPages = Math.ceil(emails.length / ITEMS_PER_PAGE);
-
-  const goToNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
-  };
-
-  const goToPrevPage = () => {
-    if (currentPage > 1) setCurrentPage(prev => prev - 1);
-  };
-
-  useEffect(() => {
-    const fetchTrash = async () => {
-      const userEmail = user?.primaryEmailAddress?.emailAddress;
-      if (!userEmail) return;
-
-      const q = query(
-        collection(db, 'emails'),
-        where('owner', '==', userEmail),
-        where('folder', '==', 'trash'),
-        orderBy('timestamp', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const emailsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date(),
-      }));
-      setEmails(emailsData);
-    };
-
-    fetchTrash();
-  }, [user]);
 
   const handlePermanentDelete = async (emailId) => {
     try {
-      await deleteDoc(doc(db, 'emails', emailId));
-      setEmails(prev => prev.filter(email => email.id !== emailId));
+      await deleteDoc(emailId);
+      refresh();
       toast.success('Email permanently deleted');
-      dispatch(fetchTrashCount(user.primaryEmailAddress.emailAddress));
     } catch (error) {
+      console.error('Delete error:', error);
       toast.error('Failed to delete email');
     }
   };
@@ -91,48 +63,41 @@ const Trash = () => {
   const handleRestore = async (emailId) => {
     try {
       const restoredEmail = emails.find(email => email.id === emailId);
-      const userEmail = user.primaryEmailAddress.emailAddress;
-
-      const destinationFolder = restoredEmail.from === userEmail ? 'sent' : 'inbox';
-
-      await updateDoc(doc(db, 'emails', emailId), { folder: destinationFolder });
-      setEmails(prev => prev.filter(email => email.id !== emailId));
-
-      if (destinationFolder === 'inbox' && restoredEmail && !restoredEmail.read) {
-        dispatch(fetchUnreadCount(userEmail));
+      if (!restoredEmail) {
+        throw new Error('Email not found');
       }
-
-      dispatch(fetchTrashCount(userEmail));
+      
+      const destinationFolder = restoredEmail.from === userEmail ? 'sent' : 'inbox';
+      await updateEmailFolder(emailId, destinationFolder);
+      refresh();
+      
       toast.success(`Email restored to ${destinationFolder.charAt(0).toUpperCase() + destinationFolder.slice(1)}`);
     } catch (error) {
+      console.error('Restore error:', error);
       toast.error('Failed to restore email');
     }
   };
 
   const handleDeleteSelected = async () => {
     try {
-      await Promise.all(
-        selectedEmails.map(id => deleteDoc(doc(db, 'emails', id)))
-      );
-      setEmails(prev => prev.filter(email => !selectedEmails.includes(email.id)));
+      await Promise.all(selectedEmails.map(id => deleteDoc(id)));
+      refresh();
       setSelectedEmails([]);
       toast.success('Selected emails deleted');
-      dispatch(fetchTrashCount(user.primaryEmailAddress.emailAddress));
     } catch (error) {
+      console.error('Delete selected error:', error);
       toast.error('Failed to delete selected emails');
     }
   };
 
   const handleClearAll = async () => {
     try {
-      await Promise.all(
-        emails.map(email => deleteDoc(doc(db, 'emails', email.id)))
-      );
-      setEmails([]);
+      await Promise.all(emails.map(email => deleteDoc(email.id)));
+      refresh();
       setSelectedEmails([]);
       toast.success('Trash cleared');
-      dispatch(fetchTrashCount(user.primaryEmailAddress.emailAddress));
     } catch (error) {
+      console.error('Clear all error:', error);
       toast.error('Failed to clear trash');
     }
     setShowConfirm(false);
@@ -145,6 +110,14 @@ const Trash = () => {
   };
 
   const isSelected = (id) => selectedEmails.includes(id);
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) setCurrentPage(prev => prev - 1);
+  };
 
   return (
     <Fragment>
@@ -178,7 +151,11 @@ const Trash = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {emails.length === 0 ? (
+          {loading && emails.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : emails.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Trash2 className="h-12 w-12 text-gray-400" />
               <p className="mt-4 text-lg font-medium text-gray-500">Trash is empty</p>
@@ -196,8 +173,11 @@ const Trash = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentEmails.map((email) => (
-                    <TableRow key={email.id}>
+                  {emails.map((email) => (
+                    <TableRow 
+                      key={email.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                    >
                       <TableCell>
                         <input
                           type="checkbox"
@@ -206,18 +186,28 @@ const Trash = () => {
                           onChange={() => toggleSelect(email.id)}
                         />
                       </TableCell>
-                      <TableCell>{email.from}</TableCell>
-                      <TableCell>{email.subject || '(No subject)'}</TableCell>
+                      <TableCell onClick={() => setSelectedEmail(email)}>{email.from}</TableCell>
+                      <TableCell onClick={() => setSelectedEmail(email)}>{email.subject || '(No subject)'}</TableCell>
                       <TableCell>{format(email.timestamp, 'MMM dd, yyyy hh:mm a')}</TableCell>
                       <TableCell className="flex gap-2 justify-center">
-                        <Button variant="outline" className="cursor-pointer" onClick={() => handleRestore(email.id)}>
+                        <Button 
+                          variant="outline" 
+                          className="cursor-pointer" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRestore(email.id);
+                          }}
+                        >
                           <RotateCw className="w-4 h-4 mr-1" />
                           Restore
                         </Button>
                         <Button
                           variant="destructive"
                           className="cursor-pointer"
-                          onClick={() => handlePermanentDelete(email.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePermanentDelete(email.id);
+                          }}
                         >
                           <Trash2 className="w-4 h-4 mr-1" />
                           Delete
@@ -228,8 +218,7 @@ const Trash = () => {
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
-              {emails.length > ITEMS_PER_PAGE && (
+              {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-4 px-4">
                   <Button
                     variant="outline"
@@ -257,7 +246,6 @@ const Trash = () => {
         </CardContent>
       </Card>
 
-      {/* Confirmation Modal */}
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-xl w-[90%] max-w-md text-center">
@@ -275,6 +263,9 @@ const Trash = () => {
             </div>
           </div>
         </div>
+      )}
+      {selectedEmail && (
+        <EmailModal email={selectedEmail} onClose={() => setSelectedEmail(null)} />
       )}
     </Fragment>
   );

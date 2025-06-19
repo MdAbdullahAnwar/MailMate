@@ -1,13 +1,10 @@
-// src/pages/Sent.jsx
-import { useState, useEffect, Fragment } from 'react';
-import {
-  collection, query, where, getDocs, doc, updateDoc, orderBy, limit, startAfter
-} from 'firebase/firestore';
-import { db } from '../firebase';
+import { useState, Fragment } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { format } from 'date-fns';
 import EmailModal from '../components/EmailModal';
-
+import { useMailAPI } from '../hooks/useMailAPI';
+import { usePaginatedEmails } from '../hooks/usePaginatedEmails';
+import useSyncMailCounts from '../hooks/useSyncMailCounts';
 import {
   Card, CardContent, CardHeader, CardTitle
 } from '@/components/ui/card';
@@ -21,82 +18,29 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-const ITEMS_PER_PAGE = 5;
-
 const Sent = () => {
-  const [emails, setEmails] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalEmails, setTotalEmails] = useState(0);
-  const [selectedEmail, setSelectedEmail] = useState(null);
-  const [pagesCursor, setPagesCursor] = useState([]);
   const { user } = useUser();
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
 
-  const fetchSentEmails = async (pageNum = 1) => {
-    try {
-      setLoading(true);
-      const userEmail = user?.primaryEmailAddress?.emailAddress;
-      if (!userEmail) return;
+  useSyncMailCounts(userEmail);
 
-      let q;
-      if (pageNum === 1) {
-        q = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'sent'),
-          orderBy('timestamp', 'desc'),
-          limit(ITEMS_PER_PAGE)
-        );
-      } else {
-        const previousCursor = pagesCursor[pageNum - 2];
-        if (!previousCursor) return;
-
-        q = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'sent'),
-          orderBy('timestamp', 'desc'),
-          startAfter(previousCursor),
-          limit(ITEMS_PER_PAGE)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-      const emailsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date()
-      }));
-
-      if (pageNum === 1) {
-        const countQuery = query(
-          collection(db, 'emails'),
-          where('owner', '==', userEmail),
-          where('folder', '==', 'sent')
-        );
-        const countSnapshot = await getDocs(countQuery);
-        setTotalEmails(countSnapshot.size);
-      }
-
-      if (querySnapshot.docs.length > 0) {
-        const newLastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-        const updatedCursors = [...pagesCursor];
-        updatedCursors[pageNum - 1] = newLastVisible;
-        setPagesCursor(updatedCursors);
-      }
-
-      setEmails(emailsData);
-    } catch (error) {
-      console.error('Error fetching sent emails:', error);
-      toast.error('Failed to load sent emails');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSentEmails(page);
-  }, [user, page]);
+  const mailAPI = useMailAPI(userEmail);
+  const { loading, toggleStar, moveToTrash } = mailAPI;
+  
+  const {
+    emails,
+    page,
+    setPage,
+    totalPages,
+    refresh
+  } = usePaginatedEmails({
+    userEmail,
+    fetchFn: mailAPI.fetchEmails,
+    folder: 'sent',
+    pageSize: 5
+  });
 
   const handleEmailClick = (emailId) => {
     const email = emails.find(e => e.id === emailId);
@@ -105,27 +49,23 @@ const Sent = () => {
 
   const handleDelete = async (emailId) => {
     try {
-      const emailRef = doc(db, 'emails', emailId);
-      await updateDoc(emailRef, { folder: 'trash' });
-      setEmails(emails.filter(email => email.id !== emailId));
+      await moveToTrash(emailId);
       toast.success('Email moved to trash');
+      refresh();
     } catch (error) {
       toast.error('Failed to delete email');
     }
   };
 
-  const toggleStar = async (email) => {
+  const handleToggleStar = async (email) => {
     try {
-      const ref = doc(db, 'emails', email.id);
-      await updateDoc(ref, { starred: !email.starred });
-      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, starred: !e.starred } : e));
+      await toggleStar(email.id, email.starred);
       toast.success(email.starred ? 'Unstarred' : 'Starred');
-    } catch (err) {
+      refresh();
+    } catch (error) {
       toast.error('Failed to update star status');
     }
   };
-
-  const totalPages = Math.ceil(totalEmails / ITEMS_PER_PAGE);
 
   return (
     <Fragment>
@@ -170,7 +110,7 @@ const Sent = () => {
                       <TableCell
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleStar(email);
+                          handleToggleStar(email);
                         }}
                       >
                         {email.starred ? (
@@ -211,11 +151,23 @@ const Sent = () => {
 
               {totalPages > 1 && (
                 <div className="flex justify-between items-center mt-2">
-                  <Button variant="outline" className="cursor-pointer" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <Button 
+                    variant="outline" 
+                    className="cursor-pointer" 
+                    disabled={page === 1} 
+                    onClick={() => setPage(p => p - 1)}
+                  >
                     <ChevronLeft className="h-4 w-4 mr-2" /> Previous
                   </Button>
-                  <span className="text-sm text-gray-600">Page {page} of {totalPages}</span>
-                  <Button variant="outline" disabled={page === totalPages} className="cursor-pointer" onClick={() => setPage(p => p + 1)}>
+                  <span className="text-sm text-gray-600">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    disabled={page === totalPages} 
+                    className="cursor-pointer" 
+                    onClick={() => setPage(p => p + 1)}
+                  >
                     Next <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
