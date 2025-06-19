@@ -8,7 +8,7 @@ const Footer = () => {
           <span className="text-gray-900 font-bold">Abdullah</span>
         </p>
         <p className="mt-1 text-md text-white-500">
-          Crafted with: React ⚛️ | Redux Toolkit 🔄 | Clerk 🔐 | Firebase 🗄️ | ShadCN 🏗️ | Tailwind CSS 🎨
+          Crafted with: React ⚛️ | Redux Toolkit 🔄 | Clerk 🔐 | Firebase 🗄️ | Tailwind CSS 🎨 | ShadCN 🏗️ |  Toastify 🔔 | Lucide Icons ✨
         </p>
       </div>
     </footer>
