@@ -66,11 +66,12 @@ const Trash = () => {
       if (!restoredEmail) {
         throw new Error('Email not found');
       }
-      
-      const destinationFolder = restoredEmail.from === userEmail ? 'sent' : 'inbox';
+
+      const destinationFolder = restoredEmail.to === userEmail ? 'inbox' : 'sent';
+
       await updateEmailFolder(emailId, destinationFolder);
       refresh();
-      
+
       toast.success(`Email restored to ${destinationFolder.charAt(0).toUpperCase() + destinationFolder.slice(1)}`);
     } catch (error) {
       console.error('Restore error:', error);
