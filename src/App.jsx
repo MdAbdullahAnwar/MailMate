@@ -24,7 +24,7 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-100 to-indigo-100 text-gray-800">
-      <Suspense fallback={<div className="text-center py-20">Loading Header...</div>}>
+      <Suspense fallback={<div className="text-center py-20"></div>}>
         {!isAuthPage && <Header />}
       </Suspense>
 
@@ -65,7 +65,7 @@ function AppContent() {
         </Suspense>
       </main>
 
-      <Suspense fallback={<div className="text-center py-4">Loading Footer...</div>}>
+      <Suspense fallback={<div className="text-center py-4"></div>}>
         {!isAuthPage && <Footer />}
       </Suspense>
     </div>
