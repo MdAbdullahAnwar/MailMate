@@ -5,6 +5,12 @@ MailMate is a modern email client built with cutting-edge web technologies to pr
 
 ---
 
+## 🌐 Live Demo
+
+👉 [Click here to try MailMate](https://mail-mate-bay.vercel.app/)  
+
+---
+
 ## 🧠 Tech Stack
 
 Built with love using:
@@ -110,6 +116,7 @@ MailMate/
 │ ├── inbox.css
 │ └── main.jsx
 ```
+---
 
 ## 🌟 Key Components
 
