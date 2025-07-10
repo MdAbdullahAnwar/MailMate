@@ -119,7 +119,7 @@ const Compose = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md py-2.4 px-8 ml-28 max-w-6xl mx-auto">
+    <div className="bg-white rounded-lg shadow-md py-2.4 px-8 ml-28 mx-auto">
       <ToastContainer 
         position="top-left"
         autoClose={5000}

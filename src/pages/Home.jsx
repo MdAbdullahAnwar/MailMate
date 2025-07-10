@@ -7,7 +7,7 @@ const Home = () => {
   const email = user?.primaryEmailAddress?.emailAddress;
 
   return (
-    <div className="min-h-[70vh] bg-gradient-to-br from-yellow-350 to-yellow-500 rounded-md flex flex-col items-center justify-center px-4 ml-28 sm:px-8">
+    <div className="min-h-[70vh]  bg-gradient-to-br from-yellow-350 to-yellow-500 rounded-md flex flex-col items-center justify-center px-4 ml-28 sm:px-8">
       <div className="bg-white/70 backdrop-blur-md shadow-lg rounded-xl p-8 w-full max-w-xl text-center space-y-6">
         <h1 className="text-4xl font-extrabold text-green-600">Welcome to MailMate 📮</h1>
         <p className="text-gray-700 text-lg">

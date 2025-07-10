@@ -122,7 +122,7 @@ const Starred = () => {
 
   return (
     <Fragment>
-      <Card className="w-[90.4%] h-fit ml-28">
+      <Card className="h-fit ml-28">
         <CardHeader className="flex flex-row items-center justify-between h-5 mt-1">
           <CardTitle className="flex items-center gap-2">
             ⭐ Starred

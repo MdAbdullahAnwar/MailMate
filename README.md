@@ -155,6 +155,9 @@ MailMate/
 - **Icons**: Intuitive **Lucide** icon set
 - **Animations**: Smooth transitions and hover effects
 
+### 💤 Lazy Loading Optimization
+- To enhance performance and reduce initial load time, MailMate implements lazy loading for key components and routes using React’s **lazy()** and **Suspense**.
+
 ---
 
 ## 🚀 Future Improvements

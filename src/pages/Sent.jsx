@@ -69,7 +69,7 @@ const Sent = () => {
 
   return (
     <Fragment>
-      <Card className="w-260 h-fit ml-28">
+      <Card className="h-fit ml-28">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
